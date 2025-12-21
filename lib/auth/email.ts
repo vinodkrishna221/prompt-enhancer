@@ -1,39 +1,45 @@
 import nodemailer from "nodemailer";
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+// SMTP Configuration from Vercel environment
+const EMAIL_SERVER_HOST = process.env.EMAIL_SERVER_HOST || "smtp.gmail.com";
+const EMAIL_SERVER_PORT = parseInt(process.env.EMAIL_SERVER_PORT || "587", 10);
+const EMAIL_SERVER_USER = process.env.EMAIL_SERVER_USER;
+const EMAIL_SERVER_PASSWORD = process.env.EMAIL_SERVER_PASSWORD;
+const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_SERVER_USER;
 
 // Create transporter lazily to avoid errors during build
 let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter(): nodemailer.Transporter {
-    if (!transporter) {
-        if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-            throw new Error("Please define GMAIL_USER and GMAIL_APP_PASSWORD environment variables");
-        }
-
-        transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: GMAIL_USER,
-                pass: GMAIL_APP_PASSWORD,
-            },
-        });
+  if (!transporter) {
+    if (!EMAIL_SERVER_USER || !EMAIL_SERVER_PASSWORD) {
+      throw new Error("Please define EMAIL_SERVER_USER and EMAIL_SERVER_PASSWORD environment variables");
     }
-    return transporter;
+
+    transporter = nodemailer.createTransport({
+      host: EMAIL_SERVER_HOST,
+      port: EMAIL_SERVER_PORT,
+      secure: EMAIL_SERVER_PORT === 465, // true for 465, false for other ports
+      auth: {
+        user: EMAIL_SERVER_USER,
+        pass: EMAIL_SERVER_PASSWORD,
+      },
+    });
+  }
+  return transporter;
 }
 
 interface SendOTPEmailParams {
-    to: string;
-    otp: string;
+  to: string;
+  otp: string;
 }
 
 export async function sendOTPEmail({ to, otp }: SendOTPEmailParams): Promise<void> {
-    const mailOptions = {
-        from: `"PromptEnhancer" <${GMAIL_USER}>`,
-        to,
-        subject: "Your Login Code - PromptEnhancer",
-        html: `
+  const mailOptions = {
+    from: `"PromptEnhancer" <${EMAIL_FROM}>`,
+    to,
+    subject: "Your Login Code - PromptEnhancer",
+    html: `
       <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #1c1917; margin: 0;">PromptEnhancer</h1>
@@ -60,15 +66,15 @@ export async function sendOTPEmail({ to, otp }: SendOTPEmailParams): Promise<voi
         </p>
       </div>
     `,
-    };
+  };
 
-    await getTransporter().sendMail(mailOptions);
+  await getTransporter().sendMail(mailOptions);
 }
 
 export function generateOTP(): string {
-    // Generate cryptographically secure 6-digit OTP
-    const array = new Uint32Array(1);
-    crypto.getRandomValues(array);
-    const otp = (array[0] % 900000) + 100000; // Ensures 6 digits (100000-999999)
-    return otp.toString();
+  // Generate cryptographically secure 6-digit OTP
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  const otp = (array[0] % 900000) + 100000; // Ensures 6 digits (100000-999999)
+  return otp.toString();
 }
