@@ -1,0 +1,171 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Sparkles, Copy, RefreshCw, Terminal } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type Category = "Coding" | "BugFixing" | "Frontend" | "Backend" | "General";
+
+const CATEGORIES: { id: Category; label: string; color: string }[] = [
+    { id: "Coding", label: "Core Coding", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+    { id: "BugFixing", label: "Bug Fixing", color: "bg-red-500/10 text-red-500 border-red-500/20" },
+    { id: "Frontend", label: "Frontend", color: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
+    { id: "Backend", label: "Backend", color: "bg-green-500/10 text-green-500 border-green-500/20" },
+    { id: "General", label: "General", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+];
+
+export default function DashboardPage() {
+    const [prompt, setPrompt] = useState("");
+    const [category, setCategory] = useState<Category>("Coding");
+    const [isEnhancing, setIsEnhancing] = useState(false);
+    const [result, setResult] = useState<string | null>(null);
+
+    const handleEnhance = () => {
+        if (!prompt.trim()) return;
+        setIsEnhancing(true);
+
+        // Mock API call
+        setTimeout(() => {
+            setResult(`Role: Expert Developer
+Context: ${category} optimization
+Original: "${prompt}"
+
+Enhanced Prompt:
+Please act as a Senior ${category} Engineer. 
+
+Task: ${prompt}
+
+Requirements:
+- Ensure strict type safety and error handling.
+- Follow SOLID principles.
+- Add comments explaining complex logic.
+- Optimize for Big-O performance.`);
+            setIsEnhancing(false);
+        }, 2000);
+    };
+
+    return (
+        <div className="max-w-6xl mx-auto space-y-8">
+            {/* Header Section */}
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                    Enhancement Stage
+                </h1>
+                <p className="text-muted-foreground">
+                    Select a domain and refine your prompt for maximum LLM performance.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Input Column */}
+                <div className="space-y-6">
+                    <Card className="border-2 shadow-none bg-card/50">
+                        <CardContent className="p-6 space-y-6">
+                            {/* Category Selector */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                    Category Mode
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {CATEGORIES.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setCategory(cat.id)}
+                                            className={cn(
+                                                "px-4 py-2 rounded-md text-sm font-medium border-2 transition-all",
+                                                category === cat.id
+                                                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                                                    : "border-transparent bg-secondary text-muted-foreground hover:bg-secondary/80"
+                                            )}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Input Area */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                    Raw Prompt
+                                </label>
+                                <Textarea
+                                    placeholder="Paste your rough prompt or code snippet here..."
+                                    className="min-h-[300px] font-mono text-base resize-none bg-background p-4 leading-relaxed"
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                />
+                                <div className="flex justify-between items-center pt-2">
+                                    <span className="text-xs text-muted-foreground">
+                                        {prompt.length} chars
+                                    </span>
+                                    <Button
+                                        size="lg"
+                                        onClick={handleEnhance}
+                                        disabled={isEnhancing || !prompt.trim()}
+                                        className="w-full md:w-auto relative overflow-hidden group"
+                                    >
+                                        {isEnhancing && (
+                                            <motion.div
+                                                className="absolute inset-0 bg-white/20"
+                                                initial={{ x: "-100%" }}
+                                                animate={{ x: "100%" }}
+                                                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                            />
+                                        )}
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        {isEnhancing ? "Enhancing..." : "Enhance Prompt"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Output Column */}
+                <div className="space-y-6 relative">
+                    {/* Connecting Line (Desktop only) */}
+                    <div className="hidden lg:block absolute top-1/2 -left-4 -translate-x-full w-8 h-0.5 border-t-2 border-dashed border-border" />
+
+                    <Card className="h-full border-2 border-dashed border-border bg-card/30 shadow-none relative overflow-hidden">
+                        {!result ? (
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 min-h-[400px]">
+                                <Terminal size={48} strokeWidth={1} className="opacity-50" />
+                                <p>Ready to process output...</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col h-full">
+                                <div className="flex items-center justify-between p-4 border-b border-border bg-card/50">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="font-mono text-xs">
+                                            GPT-4 Optimized
+                                        </Badge>
+                                        <Badge variant="secondary" className="font-mono text-xs">
+                                            {category} Mode
+                                        </Badge>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="icon" title="Regenerate">
+                                            <RefreshCw size={16} />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" title="Copy">
+                                            <Copy size={16} />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 p-6 font-mono text-sm leading-7 overflow-auto whitespace-pre-wrap text-foreground/90 bg-[#1e1e1e]">
+                                    {result}
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+}
