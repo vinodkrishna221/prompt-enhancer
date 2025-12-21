@@ -15,22 +15,50 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock submission handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError(null);
 
-        // Simulate API delay
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
             if (step === "email") {
+                // Send OTP to email
+                const response = await fetch("/api/auth/send-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to send access code");
+                }
+
                 setStep("otp");
             } else {
-                // Mock successful login
+                // Verify OTP and login
+                const response = await fetch("/api/auth/verify-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, otp }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Verification failed");
+                }
+
                 router.push("/dashboard");
             }
-        }, 1500);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -48,6 +76,11 @@ export default function LoginPage() {
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
+                        {error && (
+                            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                                {error}
+                            </div>
+                        )}
                         <AnimatePresence mode="wait">
                             {step === "email" ? (
                                 <motion.div
