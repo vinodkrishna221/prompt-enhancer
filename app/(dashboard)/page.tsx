@@ -11,6 +11,15 @@ import { cn } from "@/lib/utils";
 
 type Category = "Coding" | "BugFixing" | "Frontend" | "Backend" | "General";
 
+// Map frontend category names to API category values
+const CATEGORY_API_MAP: Record<Category, string> = {
+    Coding: "coding",
+    BugFixing: "bug-fixing",
+    Frontend: "frontend",
+    Backend: "backend",
+    General: "general",
+};
+
 const CATEGORIES: { id: Category; label: string; color: string }[] = [
     { id: "Coding", label: "Core Coding", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
     { id: "BugFixing", label: "Bug Fixing", color: "bg-red-500/10 text-red-500 border-red-500/20" },
@@ -19,34 +28,55 @@ const CATEGORIES: { id: Category; label: string; color: string }[] = [
     { id: "General", label: "General", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
 ];
 
+interface EnhanceResult {
+    enhancedPrompt: string;
+    metadata?: {
+        modelUsed: string;
+        latency: number;
+    };
+}
+
 export default function DashboardPage() {
     const [prompt, setPrompt] = useState("");
     const [category, setCategory] = useState<Category>("Coding");
     const [isEnhancing, setIsEnhancing] = useState(false);
-    const [result, setResult] = useState<string | null>(null);
+    const [result, setResult] = useState<EnhanceResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleEnhance = () => {
+    const handleEnhance = async () => {
         if (!prompt.trim()) return;
         setIsEnhancing(true);
+        setError(null);
 
-        // Mock API call
-        setTimeout(() => {
-            setResult(`Role: Expert Developer
-Context: ${category} optimization
-Original: "${prompt}"
+        try {
+            const response = await fetch("/api/enhance", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prompt,
+                    category: CATEGORY_API_MAP[category],
+                }),
+            });
 
-Enhanced Prompt:
-Please act as a Senior ${category} Engineer. 
+            const data = await response.json();
 
-Task: ${prompt}
+            if (!response.ok) {
+                throw new Error(data.error || "Enhancement failed");
+            }
 
-Requirements:
-- Ensure strict type safety and error handling.
-- Follow SOLID principles.
-- Add comments explaining complex logic.
-- Optimize for Big-O performance.`);
+            setResult(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong");
+            setResult(null);
+        } finally {
             setIsEnhancing(false);
-        }, 2000);
+        }
+    };
+
+    const handleCopy = () => {
+        if (result?.enhancedPrompt) {
+            navigator.clipboard.writeText(result.enhancedPrompt);
+        }
     };
 
     return (
@@ -133,36 +163,41 @@ Requirements:
                     <div className="hidden lg:block absolute top-1/2 -left-4 -translate-x-full w-8 h-0.5 border-t-2 border-dashed border-border" />
 
                     <Card className="h-full border-2 border-dashed border-border bg-card/30 shadow-none relative overflow-hidden">
-                        {!result ? (
+                        {error && (
+                            <div className="p-4 m-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                                {error}
+                            </div>
+                        )}
+                        {!result && !error ? (
                             <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 min-h-[400px]">
                                 <Terminal size={48} strokeWidth={1} className="opacity-50" />
                                 <p>Ready to process output...</p>
                             </div>
-                        ) : (
+                        ) : result ? (
                             <div className="flex flex-col h-full">
                                 <div className="flex items-center justify-between p-4 border-b border-border bg-card/50">
                                     <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="font-mono text-xs">
-                                            GPT-4 Optimized
+                                            {result.metadata?.modelUsed || "AI Enhanced"}
                                         </Badge>
                                         <Badge variant="secondary" className="font-mono text-xs">
                                             {category} Mode
                                         </Badge>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button variant="ghost" size="icon" title="Regenerate">
-                                            <RefreshCw size={16} />
+                                        <Button variant="ghost" size="icon" title="Regenerate" onClick={handleEnhance} disabled={isEnhancing}>
+                                            <RefreshCw size={16} className={isEnhancing ? "animate-spin" : ""} />
                                         </Button>
-                                        <Button variant="ghost" size="icon" title="Copy">
+                                        <Button variant="ghost" size="icon" title="Copy" onClick={handleCopy}>
                                             <Copy size={16} />
                                         </Button>
                                     </div>
                                 </div>
                                 <div className="flex-1 p-6 font-mono text-sm leading-7 overflow-auto whitespace-pre-wrap text-foreground/90 bg-[#1e1e1e]">
-                                    {result}
+                                    {result.enhancedPrompt}
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </Card>
                 </div>
             </div>
