@@ -173,19 +173,6 @@ ${content}
             setIsTypingComplete(false); // Reset typing
             setHistory(prev => [{ ...data, timestamp: Date.now(), category }, ...prev].slice(0, 10)); // Keep last 10
         } catch (err) {
-            // Mock Fallback for Development/Localhost without DB
-            if (process.env.NODE_ENV !== "production") {
-                const mockResult = {
-                    enhancedPrompt: `[MOCK RESULT - DB UNREACHABLE]\n\nBased on your request "${content.substring(0, 20)}...", here is an enhanced version:\n\n1. Use clearer variable names.\n2. Add error handling.\n3. Verify inputs.\n\n(This is a simulation because the local database is not connected.)`,
-                    metadata: { modelUsed: "Mock-Gpt", latency: 123 },
-                };
-                setResult(mockResult);
-                setIsTypingComplete(false);
-                setHistory(prev => [{ ...mockResult, timestamp: Date.now(), category }, ...prev].slice(0, 10));
-                toast("Using mock result (DB disconnected)", "info");
-                return;
-            }
-
             setError(err instanceof Error ? err.message : "Something went wrong");
             setResult(null);
         } finally {
