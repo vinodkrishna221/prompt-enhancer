@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Copy, RefreshCw, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProjectContextForm, ProjectContext, DEFAULT_CONTEXT } from "@/components/forms/ProjectContextForm";
+import { FrontendQuestions, FrontendData, INITIAL_FRONTEND_DATA } from "@/components/forms/FrontendQuestions";
+import { BackendQuestions, BackendData, INITIAL_BACKEND_DATA } from "@/components/forms/BackendQuestions";
+import { BugFixingQuestions, BugData, INITIAL_BUG_DATA } from "@/components/forms/BugFixingQuestions";
 
 type Category = "Coding" | "BugFixing" | "Frontend" | "Backend" | "General";
 
@@ -42,18 +46,94 @@ export default function DashboardPage() {
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [result, setResult] = useState<EnhanceResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [context, setContext] = useState<ProjectContext>(DEFAULT_CONTEXT);
+
+    // Category Form States
+    const [frontendData, setFrontendData] = useState<FrontendData>(INITIAL_FRONTEND_DATA);
+    const [backendData, setBackendData] = useState<BackendData>(INITIAL_BACKEND_DATA);
+    const [bugData, setBugData] = useState<BugData>(INITIAL_BUG_DATA);
+
+    // Helper to generate prompt from form data
+    const getPromptContent = () => {
+        if (category === "Frontend") {
+            return `
+[FRONTEND TASK]
+Type: ${frontendData.type}
+Name: ${frontendData.name}
+Interactions: ${frontendData.interactions.join(', ')}
+Breakpoints: ${frontendData.breakpoints.join(', ')}
+Accessibility: ${frontendData.accessibility}
+
+Design Ref/Desc: 
+${frontendData.designRef}
+[/FRONTEND TASK]`.trim();
+        }
+
+        if (category === "Backend") {
+            return `
+[BACKEND TASK]
+Type: ${backendData.type}
+Method: ${backendData.httpMethod}
+Auth: ${backendData.authRequired ? 'Yes' : 'No'}
+DB Ops: ${backendData.dbOps.join(', ')}
+
+Schema:
+${backendData.schema}
+[/BACKEND TASK]`.trim();
+        }
+
+        if (category === "BugFixing") {
+            return `
+[BUG REPORT]
+Environment: ${bugData.environment}
+
+Error:
+${bugData.errorMsg}
+
+Expected:
+${bugData.expected}
+
+Actual:
+${bugData.actual}
+
+Steps:
+${bugData.steps}
+
+Tried:
+${bugData.tried}
+[/BUG REPORT]`.trim();
+        }
+
+        return prompt; // Return raw prompt for Coding/General
+    };
 
     const handleEnhance = async () => {
-        if (!prompt.trim()) return;
+        const content = getPromptContent();
+
+        if (!content.trim()) return;
         setIsEnhancing(true);
         setError(null);
+
+        // Format context into a string
+        const contextString = `
+[PROJECT CONTEXT]
+Type: ${context.projectType === 'new' ? 'New Project' : 'Existing Codebase'}
+Frameworks: ${context.frameworks.join(', ')}
+Styling: ${context.styling}
+UI Library: ${context.uiLibrary}
+State Mgmt: ${context.stateManagement}
+TypeScript: ${context.isTypescript ? 'Yes' : 'No'}
+[/PROJECT CONTEXT]
+
+${content}
+`.trim();
 
         try {
             const response = await fetch("/api/enhance", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    prompt,
+                    prompt: contextString,
                     category: CATEGORY_API_MAP[category],
                 }),
             });
@@ -119,26 +199,43 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            {/* Input Area */}
+                            {/* Project Context Form */}
                             <div className="space-y-3">
-                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                    Raw Prompt
+                                <ProjectContextForm value={context} onChange={setContext} />
+                            </div>
+
+                            {/* Dynamic Forms / Input Area */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex justify-between">
+                                    {category === "Coding" || category === "General" ? "Raw Prompt" : "Task Details"}
                                 </label>
-                                <Textarea
-                                    placeholder="Paste your rough prompt or code snippet here..."
-                                    className="min-h-[300px] font-mono text-base resize-none bg-background p-4 leading-relaxed"
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                />
-                                <div className="flex justify-between items-center pt-2">
-                                    <span className="text-xs text-muted-foreground">
-                                        {prompt.length} chars
-                                    </span>
+
+                                {category === "Frontend" ? (
+                                    <FrontendQuestions value={frontendData} onChange={setFrontendData} />
+                                ) : category === "Backend" ? (
+                                    <BackendQuestions value={backendData} onChange={setBackendData} />
+                                ) : category === "BugFixing" ? (
+                                    <BugFixingQuestions value={bugData} onChange={setBugData} />
+                                ) : (
+                                    <div className="relative">
+                                        <Textarea
+                                            placeholder="Paste your rough prompt or code snippet here..."
+                                            className="min-h-[300px] font-mono text-base resize-none bg-background p-4 leading-relaxed"
+                                            value={prompt}
+                                            onChange={(e) => setPrompt(e.target.value)}
+                                        />
+                                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 rounded">
+                                            {prompt.length} chars
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-2">
                                     <Button
                                         size="lg"
                                         onClick={handleEnhance}
-                                        disabled={isEnhancing || !prompt.trim()}
-                                        className="w-full md:w-auto relative overflow-hidden group"
+                                        disabled={isEnhancing || !getPromptContent().trim()}
+                                        className="w-full relative overflow-hidden group"
                                     >
                                         {isEnhancing && (
                                             <motion.div
