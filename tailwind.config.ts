@@ -52,6 +52,25 @@ const config: Config = {
                 sans: ["var(--font-sans)", "system-ui", "sans-serif"],
                 mono: ["var(--font-mono)", "monospace"],
             },
+            animation: {
+                "shimmer": "shimmer 2s linear infinite",
+                "float": "float 6s ease-in-out infinite",
+                "pulse-glow": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+            keyframes: {
+                shimmer: {
+                    from: { backgroundPosition: "0 0" },
+                    to: { backgroundPosition: "-200% 0" },
+                },
+                float: {
+                    "0%, 100%": { transform: "translateY(0)" },
+                    "50%": { transform: "translateY(-10px)" },
+                },
+                "pulse-glow": {
+                    "0%, 100%": { opacity: "1", transform: "scale(1)" },
+                    "50%": { opacity: "0.5", transform: "scale(0.95)" },
+                },
+            },
         },
     },
     plugins: [],

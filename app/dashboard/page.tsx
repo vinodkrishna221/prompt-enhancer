@@ -4,23 +4,16 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Terminal } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { ProjectContextForm, ProjectContext, DEFAULT_CONTEXT } from "@/components/forms/ProjectContextForm";
 import { FrontendQuestions, FrontendData, INITIAL_FRONTEND_DATA } from "@/components/forms/FrontendQuestions";
 import { BackendQuestions, BackendData, INITIAL_BACKEND_DATA } from "@/components/forms/BackendQuestions";
 import { BugFixingQuestions, BugData, INITIAL_BUG_DATA } from "@/components/forms/BugFixingQuestions";
 import { PromptTemplates } from "@/components/dashboard/PromptTemplates";
-import { DiffView } from "@/components/dashboard/DiffView";
-import { Typewriter } from "@/components/ui/typewriter";
-import { QualityMetrics } from "@/components/dashboard/QualityMetrics";
 import { useToast } from "@/components/ui/use-toast";
-import { Tooltip } from "@/components/ui/tooltip";
-import { Check, Copy, RefreshCw, Sparkles, AlertCircle, X, Maximize2, Minimize2, Split } from "lucide-react";
-
-type Category = "Coding" | "BugFixing" | "Frontend" | "Backend" | "General";
+import { GlassCard } from "@/components/ui/glass-card";
+import { CategorySelector, Category } from "@/components/dashboard/CategorySelector";
+import { OutputPanel } from "@/components/dashboard/OutputPanel";
 
 // Map frontend category names to API category values
 const CATEGORY_API_MAP: Record<Category, string> = {
@@ -30,14 +23,6 @@ const CATEGORY_API_MAP: Record<Category, string> = {
     Backend: "backend",
     General: "general",
 };
-
-const CATEGORIES: { id: Category; label: string; color: string }[] = [
-    { id: "Coding", label: "Core Coding", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-    { id: "BugFixing", label: "Bug Fixing", color: "bg-red-500/10 text-red-500 border-red-500/20" },
-    { id: "Frontend", label: "Frontend", color: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
-    { id: "Backend", label: "Backend", color: "bg-green-500/10 text-green-500 border-green-500/20" },
-    { id: "General", label: "General", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-];
 
 interface EnhanceResult {
     enhancedPrompt: string;
@@ -54,14 +39,9 @@ export default function DashboardPage() {
     const [result, setResult] = useState<EnhanceResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [context, setContext] = useState<ProjectContext>(DEFAULT_CONTEXT);
-    const [isCopied, setIsCopied] = useState(false);
-    const { toast } = useToast();
-    const [history, setHistory] = useState<(EnhanceResult & { timestamp: number, category: string })[]>([]);
 
-    // Phase 3 States
-    const [viewMode, setViewMode] = useState<"normal" | "diff">("normal");
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isTypingComplete, setIsTypingComplete] = useState(false);
+    // History could be moved to a separate sidebar component in the future
+    const [history, setHistory] = useState<(EnhanceResult & { timestamp: number, category: string })[]>([]);
 
     // Category Form States
     const [frontendData, setFrontendData] = useState<FrontendData>(INITIAL_FRONTEND_DATA);
@@ -124,11 +104,9 @@ ${bugData.tried}
 
     const handleTemplateSelect = (content: string, cat: string) => {
         setPrompt(content);
-        // Also switch category if applicable
         if (["Coding", "BugFixing", "Frontend", "Backend", "General"].includes(cat)) {
             setCategory(cat as Category);
         }
-        toast("Template loaded!", "info");
     };
 
     const handleEnhance = async () => {
@@ -136,7 +114,6 @@ ${bugData.tried}
 
         if (!content.trim()) return;
         setIsEnhancing(true);
-        setIsTypingComplete(false); // Reset typing
         setError(null);
 
         // Format context into a string
@@ -170,8 +147,7 @@ ${content}
             }
 
             setResult(data);
-            setIsTypingComplete(false); // Reset typing
-            setHistory(prev => [{ ...data, timestamp: Date.now(), category }, ...prev].slice(0, 10)); // Keep last 10
+            setHistory(prev => [{ ...data, timestamp: Date.now(), category }, ...prev].slice(0, 10));
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong");
             setResult(null);
@@ -180,248 +156,112 @@ ${content}
         }
     };
 
-    const handleCopy = () => {
-        if (result?.enhancedPrompt) {
-            navigator.clipboard.writeText(result.enhancedPrompt);
-            setIsCopied(true);
-            toast("Prompt copied to clipboard!", "success");
-            setTimeout(() => setIsCopied(false), 2000);
-        }
-    };
-
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
             {/* Header Section */}
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Enhancement Stage
-                </h1>
-                <p className="text-muted-foreground">
+            <div className="space-y-2 mb-8 relative z-10">
+                <motion.h1
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-bold tracking-tight text-foreground bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent"
+                >
+                    Enhancement Studio
+                </motion.h1>
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-muted-foreground text-lg"
+                >
                     Select a domain and refine your prompt for maximum LLM performance.
-                </p>
+                </motion.p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Input Column */}
-                <div className="space-y-6">
-                    <Card className="border-2 shadow-none bg-card/50">
-                        <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+                {/* Left Column: Input Panel */}
+                <div className="lg:col-span-5 space-y-6">
+                    <GlassCard className="p-6 border-white/5 bg-black/40 backdrop-blur-xl">
+                        <div className="space-y-6">
                             {/* Category Selector */}
-                            <div className="space-y-3">
-                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                    Category Mode
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                    {CATEGORIES.map((cat) => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => setCategory(cat.id)}
-                                            className={cn(
-                                                "px-4 py-2 rounded-md text-sm font-medium border-2 transition-all",
-                                                category === cat.id
-                                                    ? "border-primary bg-primary/10 text-primary shadow-sm"
-                                                    : "border-transparent bg-secondary text-muted-foreground hover:bg-secondary/80"
-                                            )}
-                                        >
-                                            {cat.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            <CategorySelector selected={category} onSelect={setCategory} />
+
+                            <div className="w-full h-px bg-white/5" />
 
                             {/* Project Context Form */}
                             <div className="space-y-3">
                                 <ProjectContextForm value={context} onChange={setContext} />
                             </div>
 
+                            <div className="w-full h-px bg-white/5" />
+
                             {/* Dynamic Forms / Input Area */}
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex justify-between">
                                     {category === "Coding" || category === "General" ? "Raw Prompt" : "Task Details"}
                                 </label>
 
                                 <PromptTemplates onSelect={handleTemplateSelect} className="pb-2" />
 
-                                {category === "Frontend" ? (
-                                    <FrontendQuestions value={frontendData} onChange={setFrontendData} />
-                                ) : category === "Backend" ? (
-                                    <BackendQuestions value={backendData} onChange={setBackendData} />
-                                ) : category === "BugFixing" ? (
-                                    <BugFixingQuestions value={bugData} onChange={setBugData} />
-                                ) : (
-                                    <div className="relative">
-                                        <Textarea
-                                            placeholder="Paste your rough prompt or code snippet here..."
-                                            className="min-h-[300px] font-mono text-base resize-none bg-background p-4 leading-relaxed"
-                                            value={prompt}
-                                            onChange={(e) => setPrompt(e.target.value)}
-                                        />
-                                        <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
-                                            <div className="text-xs text-muted-foreground bg-background/80 px-2 rounded font-mono">
-                                                {prompt.length} chars | ~{Math.ceil(prompt.length / 4)} tokens
-                                            </div>
-                                            {/* Progress Bar */}
-                                            <div className="w-24 h-1 bg-secondary rounded-full overflow-hidden">
-                                                <div
-                                                    className={cn(
-                                                        "h-full transition-all duration-300",
-                                                        prompt.length < 2000 ? "bg-green-500" :
-                                                            prompt.length < 4000 ? "bg-yellow-500" : "bg-red-500"
-                                                    )}
-                                                    style={{ width: `${Math.min((prompt.length / 4000) * 100, 100)}%` }}
-                                                />
+                                <div className="min-h-[300px]">
+                                    {category === "Frontend" ? (
+                                        <FrontendQuestions value={frontendData} onChange={setFrontendData} />
+                                    ) : category === "Backend" ? (
+                                        <BackendQuestions value={backendData} onChange={setBackendData} />
+                                    ) : category === "BugFixing" ? (
+                                        <BugFixingQuestions value={bugData} onChange={setBugData} />
+                                    ) : (
+                                        <div className="relative group">
+                                            <Textarea
+                                                placeholder="Paste your rough prompt or code snippet here..."
+                                                className="min-h-[300px] font-mono text-base resize-none bg-black/20 border-white/10 focus:border-primary/50 focus:ring-0 p-4 leading-relaxed transition-all"
+                                                value={prompt}
+                                                onChange={(e) => setPrompt(e.target.value)}
+                                            />
+                                            <div className="absolute bottom-2 right-2 flex items-center gap-2 pointer-events-none opacity-50 text-xs text-muted-foreground">
+                                                <span>{prompt.length} chars</span>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
 
                                 <div className="pt-2">
                                     <Button
                                         size="lg"
                                         onClick={handleEnhance}
                                         disabled={isEnhancing || !getPromptContent().trim()}
-                                        className="w-full relative overflow-hidden group"
+                                        className="w-full h-12 relative overflow-hidden group bg-primary hover:bg-primary/90 text-white shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all duration-300"
                                     >
-                                        {isEnhancing && (
-                                            <motion.div
-                                                className="absolute inset-0 bg-white/20"
-                                                initial={{ x: "-100%" }}
-                                                animate={{ x: "100%" }}
-                                                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                            />
-                                        )}
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        {isEnhancing ? "Enhancing..." : "Enhance Prompt"}
+                                        <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                                        <span className="relative flex items-center justify-center gap-2 font-semibold tracking-wide">
+                                            {isEnhancing ? "Enhancing..." : (
+                                                <>
+                                                    Enhounce Prompt <ArrowRight size={16} />
+                                                </>
+                                            )}
+                                        </span>
                                     </Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </GlassCard>
                 </div>
 
-                {/* Output Column */}
-                <div className="space-y-6 relative">
-                    {/* Connecting Line (Desktop only) */}
-                    <div className="hidden lg:block absolute top-1/2 -left-4 -translate-x-full w-8 h-0.5 border-t-2 border-dashed border-border" />
-
-                    <Card className="h-full border-2 border-dashed border-border bg-card/30 shadow-none relative overflow-hidden">
-                        {error && (
-                            <div className="p-4 m-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                                {error}
-                            </div>
-                        )}
-                        {!result && !error ? (
-                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 min-h-[400px]">
-                                <Terminal size={48} strokeWidth={1} className="opacity-50" />
-                                <p>Ready to process output...</p>
-                            </div>
-                        ) : result ? (
-                            <div className={cn("flex flex-col h-full animate-in fade-in zoom-in-95 duration-300", isExpanded ? "fixed inset-4 z-50 bg-background border shadow-2xl rounded-xl p-4" : "")} >
-                                <div className="flex border-b border-border/50 bg-[#252526] px-4 py-2 shrink-0 items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
-                                            <Sparkles size={14} className="text-purple-400" />
-                                            Enhanced Output
-                                        </span>
-                                        {result.metadata && (
-                                            <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/20">
-                                                {result.metadata.modelUsed}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Tooltip content="Toggle Visual Diff">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setViewMode(prev => prev === "normal" ? "diff" : "normal")}
-                                                className={cn("h-7 w-7", viewMode === "diff" ? "bg-primary/20 text-primary" : "text-muted-foreground")}
-                                            >
-                                                <Split size={14} />
-                                            </Button>
-                                        </Tooltip>
-                                        <Button variant="ghost" size="icon" title="Regenerate" onClick={handleEnhance} disabled={isEnhancing} className="h-7 w-7 text-muted-foreground">
-                                            <RefreshCw size={14} className={isEnhancing ? "animate-spin" : ""} />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" title="Copy" onClick={handleCopy} className="h-7 w-7 text-muted-foreground">
-                                            {isCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                                        </Button>
-                                        <Button variant="ghost" size="icon" title={isExpanded ? "Collapse" : "Expand"} onClick={() => setIsExpanded(!isExpanded)} className="h-7 w-7 text-muted-foreground">
-                                            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 overflow-hidden relative group">
-                                    {viewMode === "diff" ? (
-                                        <div className="h-full overflow-auto">
-                                            <DiffView
-                                                original={getPromptContent()}
-                                                enhanced={result.enhancedPrompt}
-                                                className="h-full min-h-[300px]"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="h-full overflow-auto bg-[#1e1e1e] p-6 font-mono text-sm leading-7 text-foreground/90 whitespace-pre-wrap">
-                                            {isTypingComplete ? (
-                                                result.enhancedPrompt
-                                            ) : (
-                                                <Typewriter
-                                                    text={result.enhancedPrompt}
-                                                    speed={10}
-                                                    onComplete={() => setIsTypingComplete(true)}
-                                                />
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Quality Indicators (Footer) */}
-                                {isTypingComplete && !isExpanded && viewMode === "normal" && (
-                                    <div className="px-4 pb-4 bg-[#1e1e1e]">
-                                        <QualityMetrics promptLength={result.enhancedPrompt.length} />
-                                    </div>
-                                )}
-                            </div>
-                        ) : null}
-
-                    </Card>
-
-                    {/* Session History */}
-                    {history.length > 0 && (
-                        <div className="space-y-2 pt-4">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                                Session History
-                            </h3>
-                            <div className="grid gap-2">
-                                {history.map((item, i) => (
-                                    <div
-                                        key={item.timestamp}
-                                        onClick={() => setResult(item)}
-                                        className="p-3 rounded-lg border bg-card/50 hover:bg-card hover:border-primary/50 cursor-pointer transition-all group flex items-center justify-between"
-                                    >
-                                        <div className="flex flex-col gap-1 overflow-hidden">
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="text-[10px] h-4 px-1">{item.metadata?.modelUsed || "AI"}</Badge>
-                                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{item.category}</Badge>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {new Date(item.timestamp).toLocaleTimeString()}
-                                                </span>
-                                            </div>
-                                            <div className="text-xs text-foreground/80 truncate font-mono">
-                                                {item.enhancedPrompt.substring(0, 60)}...
-                                            </div>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                                            <Sparkles size={12} />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                {/* Right Column: Output Panel */}
+                <div className="lg:col-span-7 h-full">
+                    <OutputPanel
+                        isEnhancing={isEnhancing}
+                        result={result}
+                        error={error}
+                        originalPrompt={getPromptContent()}
+                        onRegenerate={handleEnhance}
+                    />
                 </div>
             </div>
+
+            {/* Background Blur Elements */}
+            <div className="fixed top-20 left-10 w-[500px] h-[500px] bg-purple-500/5 blur-[120px] rounded-full -z-10 pointer-events-none" />
+            <div className="fixed bottom-20 right-10 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none" />
         </div>
     );
 }
+

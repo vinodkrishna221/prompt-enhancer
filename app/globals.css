@@ -1,40 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  /* Warm Industrial Palette */
-  --background: #1c1917;
-  /* Stone 900 */
-  --foreground: #f2f0e9;
-  /* Off-white */
-  --card: #292524;
-  /* Stone 800 */
-  --card-foreground: #f2f0e9;
-  --popover: #1c1917;
-  --popover-foreground: #f2f0e9;
-  --primary: #ea580c;
-  /* Orange 600 */
+  /* Premium Dark Theme Palette */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  
+  --card: #171717;
+  --card-foreground: #ededed;
+  
+  --popover: #171717;
+  --popover-foreground: #ededed;
+  
+  --primary: #ea580c; /* keeping the orange accent */
   --primary-foreground: #ffffff;
-  --secondary: #44403c;
-  /* Stone 700 */
-  --secondary-foreground: #f2f0e9;
-  --muted: #44403c;
-  --muted-foreground: #a8a29e;
-  /* Stone 400 */
+  
+  --secondary: #262626;
+  --secondary-foreground: #a3a3a3;
+  
+  --muted: #262626;
+  --muted-foreground: #737373;
+  
   --accent: #ea580c;
   --accent-foreground: #ffffff;
+  
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #57534e;
-  /* Stone 600 */
-  --input: #292524;
+  
+  --border: #262626;
+  --input: #262626;
   --ring: #ea580c;
-  --radius: 0.2rem;
-  /* Sharper corners for industrial look */
+  
+  --radius: 0.5rem;
+  
+  /* Glassmorphism Variables */
+  --glass-bg: rgba(23, 23, 23, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
-
-
-/* Theme configuration moved to tailwind.config.ts to support IDE linting */
-
 
 body {
   background: var(--background);
@@ -42,4 +44,16 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(234, 88, 12, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
