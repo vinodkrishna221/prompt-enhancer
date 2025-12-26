@@ -6,12 +6,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Copy, RefreshCw, Terminal } from "lucide-react";
+import { Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProjectContextForm, ProjectContext, DEFAULT_CONTEXT } from "@/components/forms/ProjectContextForm";
 import { FrontendQuestions, FrontendData, INITIAL_FRONTEND_DATA } from "@/components/forms/FrontendQuestions";
 import { BackendQuestions, BackendData, INITIAL_BACKEND_DATA } from "@/components/forms/BackendQuestions";
 import { BugFixingQuestions, BugData, INITIAL_BUG_DATA } from "@/components/forms/BugFixingQuestions";
+import { PromptTemplates } from "@/components/dashboard/PromptTemplates";
+import { DiffView } from "@/components/dashboard/DiffView";
+import { Typewriter } from "@/components/ui/typewriter";
+import { QualityMetrics } from "@/components/dashboard/QualityMetrics";
+import { useToast } from "@/components/ui/use-toast";
+import { Tooltip } from "@/components/ui/tooltip";
+import { Check, Copy, RefreshCw, Sparkles, AlertCircle, X, Maximize2, Minimize2, Split } from "lucide-react";
 
 type Category = "Coding" | "BugFixing" | "Frontend" | "Backend" | "General";
 
@@ -47,6 +54,14 @@ export default function DashboardPage() {
     const [result, setResult] = useState<EnhanceResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [context, setContext] = useState<ProjectContext>(DEFAULT_CONTEXT);
+    const [isCopied, setIsCopied] = useState(false);
+    const { toast } = useToast();
+    const [history, setHistory] = useState<(EnhanceResult & { timestamp: number, category: string })[]>([]);
+
+    // Phase 3 States
+    const [viewMode, setViewMode] = useState<"normal" | "diff">("normal");
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isTypingComplete, setIsTypingComplete] = useState(false);
 
     // Category Form States
     const [frontendData, setFrontendData] = useState<FrontendData>(INITIAL_FRONTEND_DATA);
@@ -107,11 +122,21 @@ ${bugData.tried}
         return prompt; // Return raw prompt for Coding/General
     };
 
+    const handleTemplateSelect = (content: string, cat: string) => {
+        setPrompt(content);
+        // Also switch category if applicable
+        if (["Coding", "BugFixing", "Frontend", "Backend", "General"].includes(cat)) {
+            setCategory(cat as Category);
+        }
+        toast("Template loaded!", "info");
+    };
+
     const handleEnhance = async () => {
         const content = getPromptContent();
 
         if (!content.trim()) return;
         setIsEnhancing(true);
+        setIsTypingComplete(false); // Reset typing
         setError(null);
 
         // Format context into a string
@@ -145,7 +170,22 @@ ${content}
             }
 
             setResult(data);
+            setIsTypingComplete(false); // Reset typing
+            setHistory(prev => [{ ...data, timestamp: Date.now(), category }, ...prev].slice(0, 10)); // Keep last 10
         } catch (err) {
+            // Mock Fallback for Development/Localhost without DB
+            if (process.env.NODE_ENV !== "production") {
+                const mockResult = {
+                    enhancedPrompt: `[MOCK RESULT - DB UNREACHABLE]\n\nBased on your request "${content.substring(0, 20)}...", here is an enhanced version:\n\n1. Use clearer variable names.\n2. Add error handling.\n3. Verify inputs.\n\n(This is a simulation because the local database is not connected.)`,
+                    metadata: { modelUsed: "Mock-Gpt", latency: 123 },
+                };
+                setResult(mockResult);
+                setIsTypingComplete(false);
+                setHistory(prev => [{ ...mockResult, timestamp: Date.now(), category }, ...prev].slice(0, 10));
+                toast("Using mock result (DB disconnected)", "info");
+                return;
+            }
+
             setError(err instanceof Error ? err.message : "Something went wrong");
             setResult(null);
         } finally {
@@ -156,6 +196,9 @@ ${content}
     const handleCopy = () => {
         if (result?.enhancedPrompt) {
             navigator.clipboard.writeText(result.enhancedPrompt);
+            setIsCopied(true);
+            toast("Prompt copied to clipboard!", "success");
+            setTimeout(() => setIsCopied(false), 2000);
         }
     };
 
@@ -210,6 +253,8 @@ ${content}
                                     {category === "Coding" || category === "General" ? "Raw Prompt" : "Task Details"}
                                 </label>
 
+                                <PromptTemplates onSelect={handleTemplateSelect} className="pb-2" />
+
                                 {category === "Frontend" ? (
                                     <FrontendQuestions value={frontendData} onChange={setFrontendData} />
                                 ) : category === "Backend" ? (
@@ -224,8 +269,21 @@ ${content}
                                             value={prompt}
                                             onChange={(e) => setPrompt(e.target.value)}
                                         />
-                                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 rounded">
-                                            {prompt.length} chars
+                                        <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
+                                            <div className="text-xs text-muted-foreground bg-background/80 px-2 rounded font-mono">
+                                                {prompt.length} chars | ~{Math.ceil(prompt.length / 4)} tokens
+                                            </div>
+                                            {/* Progress Bar */}
+                                            <div className="w-24 h-1 bg-secondary rounded-full overflow-hidden">
+                                                <div
+                                                    className={cn(
+                                                        "h-full transition-all duration-300",
+                                                        prompt.length < 2000 ? "bg-green-500" :
+                                                            prompt.length < 4000 ? "bg-yellow-500" : "bg-red-500"
+                                                    )}
+                                                    style={{ width: `${Math.min((prompt.length / 4000) * 100, 100)}%` }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -271,31 +329,110 @@ ${content}
                                 <p>Ready to process output...</p>
                             </div>
                         ) : result ? (
-                            <div className="flex flex-col h-full">
-                                <div className="flex items-center justify-between p-4 border-b border-border bg-card/50">
+                            <div className={cn("flex flex-col h-full animate-in fade-in zoom-in-95 duration-300", isExpanded ? "fixed inset-4 z-50 bg-background border shadow-2xl rounded-xl p-4" : "")} >
+                                <div className="flex border-b border-border/50 bg-[#252526] px-4 py-2 shrink-0 items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="font-mono text-xs">
-                                            {result.metadata?.modelUsed || "AI Enhanced"}
-                                        </Badge>
-                                        <Badge variant="secondary" className="font-mono text-xs">
-                                            {category} Mode
-                                        </Badge>
+                                        <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
+                                            <Sparkles size={14} className="text-purple-400" />
+                                            Enhanced Output
+                                        </span>
+                                        {result.metadata && (
+                                            <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-full border border-purple-500/20">
+                                                {result.metadata.modelUsed}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="icon" title="Regenerate" onClick={handleEnhance} disabled={isEnhancing}>
-                                            <RefreshCw size={16} className={isEnhancing ? "animate-spin" : ""} />
+                                    <div className="flex items-center gap-1">
+                                        <Tooltip content="Toggle Visual Diff">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setViewMode(prev => prev === "normal" ? "diff" : "normal")}
+                                                className={cn("h-7 w-7", viewMode === "diff" ? "bg-primary/20 text-primary" : "text-muted-foreground")}
+                                            >
+                                                <Split size={14} />
+                                            </Button>
+                                        </Tooltip>
+                                        <Button variant="ghost" size="icon" title="Regenerate" onClick={handleEnhance} disabled={isEnhancing} className="h-7 w-7 text-muted-foreground">
+                                            <RefreshCw size={14} className={isEnhancing ? "animate-spin" : ""} />
                                         </Button>
-                                        <Button variant="ghost" size="icon" title="Copy" onClick={handleCopy}>
-                                            <Copy size={16} />
+                                        <Button variant="ghost" size="icon" title="Copy" onClick={handleCopy} className="h-7 w-7 text-muted-foreground">
+                                            {isCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                        </Button>
+                                        <Button variant="ghost" size="icon" title={isExpanded ? "Collapse" : "Expand"} onClick={() => setIsExpanded(!isExpanded)} className="h-7 w-7 text-muted-foreground">
+                                            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="flex-1 p-6 font-mono text-sm leading-7 overflow-auto whitespace-pre-wrap text-foreground/90 bg-[#1e1e1e]">
-                                    {result.enhancedPrompt}
+
+                                <div className="flex-1 overflow-hidden relative group">
+                                    {viewMode === "diff" ? (
+                                        <div className="h-full overflow-auto">
+                                            <DiffView
+                                                original={getPromptContent()}
+                                                enhanced={result.enhancedPrompt}
+                                                className="h-full min-h-[300px]"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="h-full overflow-auto bg-[#1e1e1e] p-6 font-mono text-sm leading-7 text-foreground/90 whitespace-pre-wrap">
+                                            {isTypingComplete ? (
+                                                result.enhancedPrompt
+                                            ) : (
+                                                <Typewriter
+                                                    text={result.enhancedPrompt}
+                                                    speed={10}
+                                                    onComplete={() => setIsTypingComplete(true)}
+                                                />
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Quality Indicators (Footer) */}
+                                {isTypingComplete && !isExpanded && viewMode === "normal" && (
+                                    <div className="px-4 pb-4 bg-[#1e1e1e]">
+                                        <QualityMetrics promptLength={result.enhancedPrompt.length} />
+                                    </div>
+                                )}
                             </div>
                         ) : null}
+
                     </Card>
+
+                    {/* Session History */}
+                    {history.length > 0 && (
+                        <div className="space-y-2 pt-4">
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                                Session History
+                            </h3>
+                            <div className="grid gap-2">
+                                {history.map((item, i) => (
+                                    <div
+                                        key={item.timestamp}
+                                        onClick={() => setResult(item)}
+                                        className="p-3 rounded-lg border bg-card/50 hover:bg-card hover:border-primary/50 cursor-pointer transition-all group flex items-center justify-between"
+                                    >
+                                        <div className="flex flex-col gap-1 overflow-hidden">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-[10px] h-4 px-1">{item.metadata?.modelUsed || "AI"}</Badge>
+                                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{item.category}</Badge>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {new Date(item.timestamp).toLocaleTimeString()}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-foreground/80 truncate font-mono">
+                                                {item.enhancedPrompt.substring(0, 60)}...
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                                            <Sparkles size={12} />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

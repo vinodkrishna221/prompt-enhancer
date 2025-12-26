@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export interface FrontendData {
     type: string;
@@ -52,7 +53,12 @@ export function FrontendQuestions({ value, onChange }: FrontendQuestionsProps) {
             <div className="grid grid-cols-2 gap-4">
                 {/* Type Selection */}
                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-foreground/80">What are you building?</label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-foreground/80">What are you building?</label>
+                        <Tooltip content="Helper for the AI to understand component structure.">
+                            <Info size={12} className="text-muted-foreground/50 hover:text-primary transition-colors cursor-help" />
+                        </Tooltip>
+                    </div>
                     <select
                         className="w-full text-sm bg-background border border-input rounded-md px-3 py-2"
                         value={value.type}
@@ -75,7 +81,12 @@ export function FrontendQuestions({ value, onChange }: FrontendQuestionsProps) {
 
             {/* Interactions */}
             <div className="space-y-2">
-                <label className="text-xs font-semibold text-foreground/80">Required Interactions</label>
+                <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-foreground/80">Required Interactions</label>
+                    <Tooltip content="Specific behaviors to implement.">
+                        <Info size={12} className="text-muted-foreground/50 hover:text-primary transition-colors cursor-help" />
+                    </Tooltip>
+                </div>
                 <div className="flex flex-wrap gap-2">
                     {INTERACTIONS.map((item) => (
                         <button
@@ -97,7 +108,12 @@ export function FrontendQuestions({ value, onChange }: FrontendQuestionsProps) {
             {/* Breakpoints & Accessibility */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-foreground/80">Breakpoints</label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-foreground/80">Breakpoints</label>
+                        <Tooltip content="Device sizes to optimize for.">
+                            <Info size={12} className="text-muted-foreground/50 hover:text-primary transition-colors cursor-help" />
+                        </Tooltip>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                         {BREAKPOINTS.map((item) => (
                             <button
@@ -117,7 +133,12 @@ export function FrontendQuestions({ value, onChange }: FrontendQuestionsProps) {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-foreground/80">Accessibility</label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-foreground/80">Accessibility</label>
+                        <Tooltip content="WCAG compliance level. 'AA' is standard for most apps.">
+                            <Info size={12} className="text-muted-foreground/50 hover:text-primary transition-colors cursor-help" />
+                        </Tooltip>
+                    </div>
                     <select
                         className="w-full text-sm bg-background border border-input rounded-md px-3 py-2"
                         value={value.accessibility}
