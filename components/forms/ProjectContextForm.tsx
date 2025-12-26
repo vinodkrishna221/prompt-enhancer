@@ -19,6 +19,10 @@ export interface ProjectContext {
     uiLibrary: string;
     stateManagement: string;
     isTypescript: boolean;
+    // Fields for "Existing Codebase" mode
+    directoryStructure?: string;
+    sharedComponents?: string;
+    importAliases?: string;
 }
 
 export const DEFAULT_CONTEXT: ProjectContext = {
@@ -28,6 +32,9 @@ export const DEFAULT_CONTEXT: ProjectContext = {
     uiLibrary: "shadcn/ui",
     stateManagement: "None",
     isTypescript: true,
+    directoryStructure: "",
+    sharedComponents: "",
+    importAliases: "@/",
 };
 
 interface ProjectContextFormProps {
@@ -217,12 +224,12 @@ export function ProjectContextForm({ value, onChange }: ProjectContextFormProps)
                                 </Tooltip>
                             </div>
                             <select
-                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
+                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none min-w-[140px]"
                                 value={value.styling}
                                 onChange={(e) => updateField("styling", e.target.value)}
                             >
                                 {STYLING_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
+                                    <option key={opt} value={opt} title={opt}>{opt}</option>
                                 ))}
                             </select>
                         </div>
@@ -236,12 +243,12 @@ export function ProjectContextForm({ value, onChange }: ProjectContextFormProps)
                                 </Tooltip>
                             </div>
                             <select
-                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
+                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none min-w-[140px]"
                                 value={value.uiLibrary}
                                 onChange={(e) => updateField("uiLibrary", e.target.value)}
                             >
                                 {UI_LIBS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
+                                    <option key={opt} value={opt} title={opt}>{opt}</option>
                                 ))}
                             </select>
                         </div>
@@ -285,10 +292,66 @@ export function ProjectContextForm({ value, onChange }: ProjectContextFormProps)
                             </div>
                         </div>
                     </div>
-
-
                 </div>
             </div>
+
+            {/* Existing Codebase Context Fields */}
+            {value.projectType === "existing" && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pt-4 border-t border-border/50"
+                >
+                    <div className="flex items-center gap-2 mb-2">
+                        <h4 className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Existing Codebase Context</h4>
+                        <Tooltip content="Provide details about your existing project structure for better integration.">
+                            <Info size={12} className="text-muted-foreground/50 hover:text-primary transition-colors cursor-help" />
+                        </Tooltip>
+                    </div>
+
+                    {/* Directory Structure */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-semibold text-foreground/80">Directory Structure</label>
+                        <textarea
+                            className="w-full text-xs bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none font-mono min-h-[80px] resize-y"
+                            placeholder="Paste your project folder tree here...
+src/
+├── components/
+│   ├── common/
+│   └── pages/
+├── lib/
+└── app/"
+                            value={value.directoryStructure || ""}
+                            onChange={(e) => updateField("directoryStructure", e.target.value)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Shared Components */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-foreground/80">Shared Components</label>
+                            <input
+                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
+                                placeholder="Layout, Button, Card..."
+                                value={value.sharedComponents || ""}
+                                onChange={(e) => updateField("sharedComponents", e.target.value)}
+                            />
+                        </div>
+
+                        {/* Import Aliases */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-foreground/80">Import Aliases</label>
+                            <input
+                                className="w-full text-sm bg-background border border-input rounded-md px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/20 outline-none"
+                                placeholder="@/components, ~/lib"
+                                value={value.importAliases || ""}
+                                onChange={(e) => updateField("importAliases", e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </motion.div>
+            )}
         </Card >
     );
 }

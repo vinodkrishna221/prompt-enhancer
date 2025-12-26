@@ -117,6 +117,12 @@ ${bugData.tried}
         setError(null);
 
         // Format context into a string
+        const existingCodebaseContext = context.projectType === 'existing' ? `
+Directory Structure:
+${context.directoryStructure || 'Not specified'}
+Shared Components: ${context.sharedComponents || 'Not specified'}
+Import Aliases: ${context.importAliases || '@/'}` : '';
+
         const contextString = `
 [PROJECT CONTEXT]
 Type: ${context.projectType === 'new' ? 'New Project' : 'Existing Codebase'}
@@ -124,7 +130,7 @@ Frameworks: ${context.frameworks.join(', ')}
 Styling: ${context.styling}
 UI Library: ${context.uiLibrary}
 State Mgmt: ${context.stateManagement}
-TypeScript: ${context.isTypescript ? 'Yes' : 'No'}
+TypeScript: ${context.isTypescript ? 'Yes' : 'No'}${existingCodebaseContext}
 [/PROJECT CONTEXT]
 
 ${content}
@@ -235,7 +241,7 @@ ${content}
                                         <span className="relative flex items-center justify-center gap-2 font-semibold tracking-wide">
                                             {isEnhancing ? "Enhancing..." : (
                                                 <>
-                                                    Enhounce Prompt <ArrowRight size={16} />
+                                                    Enhance Prompt <ArrowRight size={16} />
                                                 </>
                                             )}
                                         </span>
