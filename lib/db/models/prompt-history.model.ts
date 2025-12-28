@@ -70,7 +70,7 @@ const PromptHistorySchema = new Schema<IPromptHistory>(
             type: String,
         }],
         metadata: {
-            modelUsed: { type: String, default: "gpt-4o-mini" },
+            modelUsed: { type: String, default: "openai/gpt-oss-120b:free" },
             latency: { type: Number, default: 0 },
             // NEW: Token count for usage tracking
             tokenCount: { type: Number },
